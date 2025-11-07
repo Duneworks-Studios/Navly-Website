@@ -1,22 +1,5 @@
-import { motion, useScroll, useTransform, useMotionValue, useSpring, useReducedMotion } from 'framer-motion';
+import { motion, useScroll, useTransform, useMotionValue, useSpring } from 'framer-motion';
 import { useState, useEffect, useRef } from 'react';
-
-// Mobile detection hook
-function useIsMobile() {
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768 || /iPhone|iPad|iPod|Android/i.test(navigator.userAgent));
-    };
-    
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
-
-  return isMobile;
-}
 
 const containerVariants = {
   hidden: { opacity: 0, y: 24 },
@@ -89,23 +72,19 @@ const scrollToSection = (id) => {
   }
 };
 
-// Star Particle Component - Optimized for mobile
+// Star Particle Component
 function StarField({ count = 100 }) {
-  const isMobile = useIsMobile();
-  const prefersReducedMotion = useReducedMotion();
-  const actualCount = isMobile ? Math.min(count, 60) : count;
-  
-  const stars = Array.from({ length: actualCount }).map((_, i) => ({
+  const stars = Array.from({ length: count }).map((_, i) => ({
     id: i,
     x: Math.random() * 100,
     y: Math.random() * 100,
-    size: isMobile ? Math.random() * 1.5 + 0.5 : Math.random() * 2 + 0.5,
+    size: Math.random() * 2 + 0.5,
     opacity: Math.random() * 0.8 + 0.2,
     twinkleSpeed: Math.random() * 3 + 2
   }));
 
   return (
-    <div className="pointer-events-none fixed inset-0 overflow-hidden" style={{ willChange: 'contents' }}>
+    <div className="pointer-events-none fixed inset-0 overflow-hidden">
       {stars.map((star) => (
         <motion.div
           key={star.id}
@@ -116,10 +95,9 @@ function StarField({ count = 100 }) {
             width: `${star.size}px`,
             height: `${star.size}px`,
             opacity: star.opacity,
-            boxShadow: `0 0 ${star.size * 2}px rgba(255, 255, 255, ${isMobile ? 0.5 : 0.8})`,
-            willChange: prefersReducedMotion ? 'auto' : 'opacity, transform'
+            boxShadow: `0 0 ${star.size * 2}px rgba(255, 255, 255, 0.8)`
           }}
-          animate={prefersReducedMotion ? {} : {
+          animate={{
             opacity: [star.opacity, star.opacity * 0.3, star.opacity],
             scale: [1, 1.2, 1]
           }}
@@ -134,58 +112,35 @@ function StarField({ count = 100 }) {
   );
 }
 
-// Solar System Component with Sun, Planets, and Moons - Optimized for mobile
+// Solar System Component with Sun, Planets, and Moons
 function SolarSystem({ scrollY }) {
-  const isMobile = useIsMobile();
-  const prefersReducedMotion = useReducedMotion();
   const [basePosition, setBasePosition] = useState({ x: 1200, y: 400 });
-  const [screenWidth, setScreenWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1920);
 
   useEffect(() => {
     const updatePosition = () => {
-      const width = window.innerWidth;
-      const height = window.innerHeight;
-      setScreenWidth(width);
-      
-      if (isMobile) {
-        setBasePosition({
-          x: width * 0.85,
-          y: height * 0.4
-        });
-      } else {
-        setBasePosition({
-          x: width * 0.75,
-          y: height * 0.5
-        });
-      }
+      setBasePosition({
+        x: window.innerWidth * 0.75,
+        y: window.innerHeight * 0.5
+      });
     };
     
     updatePosition();
-    const handleResize = () => {
-      requestAnimationFrame(updatePosition);
-    };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, [isMobile]);
+    window.addEventListener('resize', updatePosition);
+    return () => window.removeEventListener('resize', updatePosition);
+  }, []);
 
-  // Scale and opacity based on scroll - less intense on mobile
-  const systemScale = useTransform(scrollY, [0, 1500], isMobile ? [0.6, 0.8] : [0.8, 1.0], { clamp: true });
-  const systemOpacity = useTransform(scrollY, [0, 500, 2500], isMobile ? [0.5, 0.7, 0.4] : [0.8, 0.95, 0.7], { clamp: true });
-  
-  // Hide on very small screens or if reduced motion
-  if (prefersReducedMotion || (isMobile && screenWidth < 400)) {
-    return null;
-  }
+  // Scale and opacity based on scroll
+  const systemScale = useTransform(scrollY, [0, 1500], [0.8, 1.0], { clamp: true });
+  const systemOpacity = useTransform(scrollY, [0, 500, 2500], [0.8, 0.95, 0.7], { clamp: true });
 
-  // Planet configurations - reduced scale and complexity on mobile
-  const planetScale = isMobile ? 0.6 : 1;
+  // Planet configurations: {name, radius, orbitSpeed, color, size, hasMoons}
   const planets = [
-    { name: 'Mercury', radius: 80 * planetScale, orbitSpeed: 0.88, color: 'rgba(139, 140, 142, 0.9)', size: Math.max(8, 12 * planetScale) },
-    { name: 'Venus', radius: 120 * planetScale, orbitSpeed: 0.62, color: 'rgba(255, 204, 102, 0.9)', size: Math.max(10, 16 * planetScale) },
-    { name: 'Earth', radius: 160 * planetScale, orbitSpeed: 0.38, color: 'rgba(59, 130, 246, 0.9)', size: Math.max(12, 18 * planetScale), hasMoons: !isMobile },
-    { name: 'Mars', radius: 200 * planetScale, orbitSpeed: 0.24, color: 'rgba(220, 38, 38, 0.9)', size: Math.max(10, 14 * planetScale) },
-    { name: 'Jupiter', radius: 260 * planetScale, orbitSpeed: 0.1, color: 'rgba(251, 191, 36, 0.9)', size: Math.max(18, 32 * planetScale) },
-    { name: 'Saturn', radius: 320 * planetScale, orbitSpeed: 0.08, color: 'rgba(251, 191, 36, 0.85)', size: Math.max(16, 28 * planetScale) }
+    { name: 'Mercury', radius: 80, orbitSpeed: 0.88, color: 'rgba(139, 140, 142, 0.9)', size: 12 },
+    { name: 'Venus', radius: 120, orbitSpeed: 0.62, color: 'rgba(255, 204, 102, 0.9)', size: 16 },
+    { name: 'Earth', radius: 160, orbitSpeed: 0.38, color: 'rgba(59, 130, 246, 0.9)', size: 18, hasMoons: true },
+    { name: 'Mars', radius: 200, orbitSpeed: 0.24, color: 'rgba(220, 38, 38, 0.9)', size: 14 },
+    { name: 'Jupiter', radius: 260, orbitSpeed: 0.1, color: 'rgba(251, 191, 36, 0.9)', size: 32 },
+    { name: 'Saturn', radius: 320, orbitSpeed: 0.08, color: 'rgba(251, 191, 36, 0.85)', size: 28 }
   ];
 
   // Calculate orbital progress for each planet (different speeds)
@@ -206,8 +161,7 @@ function SolarSystem({ scrollY }) {
         left: basePosition.x,
         top: basePosition.y,
         scale: systemScale,
-        opacity: systemOpacity,
-        willChange: 'transform, opacity'
+        opacity: systemOpacity
       }}
     >
       {/* Sun - Center */}
@@ -243,8 +197,8 @@ function SolarSystem({ scrollY }) {
         </motion.div>
       </div>
 
-      {/* Orbital Paths - Hidden on mobile for performance */}
-      {!isMobile && planets.map((planet) => (
+      {/* Orbital Paths */}
+      {planets.map((planet) => (
         <motion.div
           key={`orbit-${planet.name}`}
           className="absolute -translate-x-1/2 -translate-y-1/2"
@@ -405,13 +359,8 @@ function Nebula({ scrollY, position = 'top' }) {
 
 function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
-  const isMobile = useIsMobile();
   const { scrollY } = useScroll();
-  const prefersReducedMotion = useReducedMotion();
   const navbarOpacity = useTransform(scrollY, [0, 100], [0.95, 0.98]);
-  
-  // Use static blur value instead of transform for better performance
-  const navbarBlurValue = isMobile ? 12 : 16;
 
   const navLinks = [
     { label: 'Home', id: 'home' },
@@ -420,56 +369,27 @@ function Navbar() {
     { label: 'Contact', id: 'contact' }
   ];
 
-  // Close menu when clicking outside
-  useEffect(() => {
-    if (isOpen) {
-      const handleClickOutside = (e) => {
-        if (!e.target.closest('nav')) {
-          setIsOpen(false);
-        }
-      };
-      document.addEventListener('click', handleClickOutside);
-      return () => document.removeEventListener('click', handleClickOutside);
-    }
-  }, [isOpen]);
-
-  // Prevent scroll when menu is open on mobile
-  useEffect(() => {
-    if (isOpen && isMobile) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [isOpen, isMobile]);
-
   return (
     <motion.nav
       style={{
-        opacity: navbarOpacity,
-        backdropFilter: `blur(${navbarBlurValue}px)`
+        opacity: navbarOpacity
       }}
-      className="fixed top-0 left-0 right-0 z-50 mx-auto w-full max-w-7xl px-4 pt-2 sm:px-6 sm:pt-3 lg:px-10 lg:px-16"
+      className="fixed top-0 left-0 right-0 z-50 mx-auto w-full max-w-7xl px-6 pt-3 sm:px-10 lg:px-16"
     >
-      <div className="flex items-center justify-between rounded-full border border-white/10 bg-gradient-to-r from-slate-900/40 via-indigo-900/20 to-slate-900/40 px-4 py-2 sm:px-5 backdrop-blur-xl transition-all duration-300 shadow-[0_0_30px_rgba(99,102,241,0.2)]">
+      <div className="flex items-center justify-between rounded-full border border-white/10 bg-gradient-to-r from-slate-900/40 via-indigo-900/20 to-slate-900/40 px-5 py-2 backdrop-blur-xl transition-all duration-300 shadow-[0_0_30px_rgba(99,102,241,0.2)]">
         <motion.button
-          onClick={() => {
-            scrollToSection('home');
-            setIsOpen(false);
-          }}
-          className="flex items-center gap-2 transition-opacity active:opacity-80"
-          whileHover={!isMobile ? { scale: 1.02 } : {}}
+          onClick={() => scrollToSection('home')}
+          className="flex items-center gap-2.5 transition-opacity hover:opacity-80"
+          whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
         >
           <motion.div
-            className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg bg-gradient-to-br from-sky-400/80 via-indigo-500/80 to-purple-600/80 shadow-[0_0_20px_rgba(99,102,241,0.5)]"
-            whileHover={!isMobile ? { boxShadow: '0 0 30px rgba(99, 102, 241, 0.8)' } : {}}
+            className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-sky-400/80 via-indigo-500/80 to-purple-600/80 shadow-[0_0_20px_rgba(99,102,241,0.5)]"
+            whileHover={{ boxShadow: '0 0 30px rgba(99, 102, 241, 0.8)' }}
           >
-            <span className="text-sm sm:text-base font-semibold tracking-tight text-white">N</span>
+            <span className="text-base font-semibold tracking-tight text-white">N</span>
           </motion.div>
-          <span className="text-sm sm:text-base font-medium tracking-tight text-slate-100">Navly</span>
+          <span className="text-base font-medium tracking-tight text-slate-100">Navly</span>
         </motion.button>
 
         {/* Desktop Navigation */}
@@ -503,81 +423,44 @@ function Navbar() {
 
         {/* Mobile Menu Button */}
         <button
-          onClick={(e) => {
-            e.stopPropagation();
-            setIsOpen(!isOpen);
-          }}
-          className="relative z-50 flex flex-col gap-1.5 rounded-lg p-2 md:hidden touch-manipulation"
+          onClick={() => setIsOpen(!isOpen)}
+          className="flex flex-col gap-1.5 rounded-lg p-2 md:hidden"
           aria-label="Toggle menu"
-          aria-expanded={isOpen}
         >
           <motion.span
-            className="h-0.5 w-6 bg-slate-300 origin-center"
+            className="h-0.5 w-6 bg-slate-300"
             animate={isOpen ? { rotate: 45, y: 6 } : { rotate: 0, y: 0 }}
-            transition={{ duration: 0.25, ease: 'easeInOut' }}
+            transition={{ duration: 0.3 }}
           />
           <motion.span
             className="h-0.5 w-6 bg-slate-300"
-            animate={isOpen ? { opacity: 0, scaleX: 0 } : { opacity: 1, scaleX: 1 }}
-            transition={{ duration: 0.2 }}
+            animate={isOpen ? { opacity: 0 } : { opacity: 1 }}
+            transition={{ duration: 0.3 }}
           />
           <motion.span
-            className="h-0.5 w-6 bg-slate-300 origin-center"
+            className="h-0.5 w-6 bg-slate-300"
             animate={isOpen ? { rotate: -45, y: -6 } : { rotate: 0, y: 0 }}
-            transition={{ duration: 0.25, ease: 'easeInOut' }}
+            transition={{ duration: 0.3 }}
           />
         </button>
       </div>
 
-      {/* Mobile Menu Overlay */}
-      {isOpen && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden"
-          onClick={() => setIsOpen(false)}
-        />
-      )}
-
       {/* Mobile Menu */}
       <motion.div
         initial={false}
-        animate={isOpen ? { 
-          opacity: 1, 
-          height: 'auto',
-          scale: 1,
-          y: 0
-        } : { 
-          opacity: 0, 
-          height: 0,
-          scale: 0.95,
-          y: -10
-        }}
-        transition={{ 
-          duration: prefersReducedMotion ? 0.1 : 0.3,
-          ease: [0.4, 0, 0.2, 1]
-        }}
-        className="mt-2 overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-slate-900/95 via-indigo-900/30 to-slate-900/95 backdrop-blur-xl md:hidden shadow-[0_0_40px_rgba(99,102,241,0.3)] z-40"
-        style={{ willChange: 'transform, opacity, height' }}
+        animate={isOpen ? { opacity: 1, height: 'auto' } : { opacity: 0, height: 0 }}
+        className="mt-2 overflow-hidden rounded-full border border-white/10 bg-gradient-to-r from-slate-900/40 via-indigo-900/20 to-slate-900/40 backdrop-blur-xl md:hidden shadow-[0_0_30px_rgba(99,102,241,0.2)]"
       >
-        <div className="flex flex-col gap-1 p-3">
-          {navLinks.map((link, index) => (
+        <div className="flex flex-col gap-0.5 p-2">
+          {navLinks.map((link) => (
             <motion.button
               key={link.id}
               onClick={() => {
                 scrollToSection(link.id);
                 setIsOpen(false);
               }}
-              className="px-5 py-3.5 text-left text-base font-medium text-slate-200 active:bg-white/10 active:text-white rounded-xl transition-colors touch-manipulation"
-              initial={{ opacity: 0, x: -20 }}
-              animate={isOpen ? { 
-                opacity: 1, 
-                x: 0,
-                transition: { delay: index * 0.05, duration: 0.2 }
-              } : { opacity: 0 }}
-              whileTap={{ scale: 0.98, x: 4 }}
+              className="px-4 py-2 text-left text-sm font-medium text-slate-300 transition-colors hover:bg-white/5 hover:text-slate-100 rounded-lg"
+              whileHover={{ x: 4 }}
             >
               {link.label}
             </motion.button>
@@ -589,46 +472,32 @@ function Navbar() {
 }
 
 function App() {
-  const isMobile = useIsMobile();
-  const prefersReducedMotion = useReducedMotion();
   const { scrollY } = useScroll();
-  
-  // Reduced parallax intensity on mobile for better performance
-  const parallaxIntensity = isMobile ? 0.3 : 1;
-  const heroY = useTransform(scrollY, [0, 500], [0, -100 * parallaxIntensity]);
+  const heroY = useTransform(scrollY, [0, 500], [0, -100]);
   const heroOpacity = useTransform(scrollY, [0, 300], [1, 0.3]);
-  const bg1Y = useTransform(scrollY, [0, 500], [0, -50 * parallaxIntensity]);
-  const bg2Y = useTransform(scrollY, [0, 500], [0, 50 * parallaxIntensity]);
-  const bg3Y = useTransform(scrollY, [0, 500], [0, -30 * parallaxIntensity]);
+  const bg1Y = useTransform(scrollY, [0, 500], [0, -50]);
+  const bg2Y = useTransform(scrollY, [0, 500], [0, 50]);
+  const bg3Y = useTransform(scrollY, [0, 500], [0, -30]);
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-gradient-to-b from-slate-950 via-indigo-950/30 to-slate-950 text-slate-100">
-      {/* Starfield Background - Reduced count on mobile */}
-      <StarField count={isMobile ? 60 : 150} />
+      {/* Starfield Background */}
+      <StarField count={150} />
 
-      {/* Deep Space Background Layers - Reduced blur on mobile */}
-      <div className="pointer-events-none fixed inset-0 opacity-60" style={{ willChange: 'transform' }}>
+      {/* Deep Space Background Layers */}
+      <div className="pointer-events-none fixed inset-0 opacity-60">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(99,102,241,0.15)_0%,_transparent_50%),_radial-gradient(ellipse_at_bottom_right,_rgba(139,92,246,0.1)_0%,_transparent_50%)]" />
         <motion.div
-          style={{ 
-            y: bg1Y,
-            willChange: prefersReducedMotion ? 'auto' : 'transform'
-          }}
-          className={`absolute -top-40 -left-32 h-96 w-96 rounded-full bg-indigo-500/20 ${isMobile ? 'blur-2xl' : 'blur-3xl'}`}
+          style={{ y: bg1Y }}
+          className="absolute -top-40 -left-32 h-96 w-96 rounded-full bg-indigo-500/20 blur-3xl"
         />
         <motion.div
-          style={{ 
-            y: bg2Y,
-            willChange: prefersReducedMotion ? 'auto' : 'transform'
-          }}
-          className={`absolute top-1/3 -right-32 h-80 w-80 rounded-full bg-purple-500/20 ${isMobile ? 'blur-2xl' : 'blur-3xl'}`}
+          style={{ y: bg2Y }}
+          className="absolute top-1/3 -right-32 h-80 w-80 rounded-full bg-purple-500/20 blur-3xl"
         />
         <motion.div
-          style={{ 
-            y: bg3Y,
-            willChange: prefersReducedMotion ? 'auto' : 'transform'
-          }}
-          className={`absolute bottom-0 left-1/3 h-72 w-72 rounded-full bg-blue-500/15 ${isMobile ? 'blur-2xl' : 'blur-3xl'}`}
+          style={{ y: bg3Y }}
+          className="absolute bottom-0 left-1/3 h-72 w-72 rounded-full bg-blue-500/15 blur-3xl"
         />
       </div>
 
@@ -641,7 +510,7 @@ function App() {
 
       <Navbar />
 
-      <div className="relative z-10 mx-auto w-full max-w-6xl px-4 pt-20 pb-16 sm:px-6 sm:pt-24 lg:px-10 lg:px-16">
+      <div className="relative z-10 mx-auto w-full max-w-6xl px-6 pt-24 pb-16 sm:px-10 lg:px-16">
         {/* Hero Section */}
         <motion.section
           id="home"
